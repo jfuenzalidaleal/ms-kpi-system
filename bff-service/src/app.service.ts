@@ -3,8 +3,6 @@ import { Injectable } from '@nestjs/common';
 @Injectable()
 export class AppService {
   async getKpis() {
-    // Aquí harías los fetch a tus microservicios reales
-    // const res = await fetch('http://micro-ventas/api/stats');
     return {
       mainMetrics: [
         { id: 1, label: 'Ventas Totales', value: '$12,450', trend: 12 },

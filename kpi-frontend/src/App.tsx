@@ -1,133 +1,106 @@
-import { useState } from 'react';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area 
+import React from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
 } from 'recharts';
-import { 
-  LayoutDashboard, Activity, Users, DollarSign, ArrowUpRight, ArrowDownRight, RefreshCcw 
-} from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
 
-// Datos de ejemplo (Esto vendrá de tu BFF después)
-const data = [
-  { name: '00:00', kpi: 400 },
-  { name: '04:00', kpi: 300 },
-  { name: '08:00', kpi: 900 },
-  { name: '12:00', kpi: 1500 },
-  { name: '16:00', kpi: 1200 },
-  { name: '20:00', kpi: 1700 },
-];
+const getIcon = (label: string) => {
+  if (label.includes('Ventas')) return <DollarSign className="text-blue-400" size={24} />;
+  if (label.includes('Clientes')) return <Users className="text-purple-400" size={24} />;
+  return <Activity className="text-emerald-400" size={24} />;
+};
 
 function App() {
-  const [loading, setLoading] = useState(false);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['kpis'],
+    queryFn: async () => {
+      const response = await fetch('http://localhost:3000/kpis');
+      if (!response.ok) throw new Error('Error al conectar con el BFF');
+      return response.json();
+    }
+  });
+
+  if (isLoading) return (
+    <div className="flex h-screen w-full items-center justify-center bg-slate-900 text-white">
+      <div className="text-xl animate-pulse">Cargando métricas del servidor...</div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="flex h-screen w-full items-center justify-center bg-slate-900 text-red-400 p-4 text-center">
+      <div>
+        <p className="text-2xl mb-2">⚠️ Error de Conexión</p>
+        <p className="opacity-70">Asegúrate de que el bff-service esté corriendo en el puerto 3000</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="flex min-h-screen bg-slate-50 font-sans text-slate-900">
-      {/* Sidebar - Barra Lateral */}
-      <aside className="w-64 bg-white border-r border-slate-200 hidden md:flex flex-col">
-        <div className="p-6 border-b border-slate-100">
-          <div className="flex items-center gap-2 font-bold text-xl text-blue-600">
-            <Activity size={28} />
-            <span>KPI Manager</span>
-          </div>
-        </div>
-        <nav className="flex-1 p-4 space-y-2">
-          <button className="flex items-center gap-3 w-full p-3 bg-blue-50 text-blue-700 rounded-lg font-medium">
-            <LayoutDashboard size={20} /> Dashboard
-          </button>
-          <button className="flex items-center gap-3 w-full p-3 text-slate-500 hover:bg-slate-50 rounded-lg transition-colors">
-            <Activity size={20} /> Microservicios
-          </button>
-        </nav>
-      </aside>
+    <div className="min-h-screen w-full bg-slate-900 text-slate-100 p-6 md:p-12 overflow-x-hidden">
+      <header className="max-w-7xl mx-auto mb-10 text-left">
+        <h1 className="text-4xl font-bold text-white tracking-tight">Dashboard de KPIs</h1>
+        <p className="text-slate-400 mt-2 text-lg">Monitoreo activo de microservicios</p>
+      </header>
 
-      {/* Main Content - Contenido Principal */}
-      <main className="flex-1 p-8">
-        <header className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl font-bold">Resumen de Gestión</h1>
-            <p className="text-slate-500">Métricas consolidadas de tus servicios</p>
-          </div>
-          <button 
-            onClick={() => setLoading(true)}
-            className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-lg hover:bg-slate-50 transition-all shadow-sm"
-          >
-            <RefreshCcw size={18} className={loading ? 'animate-spin' : ''} />
-            Actualizar
-          </button>
-        </header>
-
-        {/* KPI Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <KpiCard 
-            title="Ingresos Totales" 
-            value="$45,231.89" 
-            trend="+20.1%" 
-            isPositive={true}
-            icon={<DollarSign className="text-blue-600" />}
-          />
-          <KpiCard 
-            title="Sesiones Activas" 
-            value="+2,350" 
-            trend="+180.1%" 
-            isPositive={true}
-            icon={<Users className="text-purple-600" />}
-          />
-          <KpiCard 
-            title="Latencia Media" 
-            value="12.5 ms" 
-            trend="-4.3%" 
-            isPositive={true} 
-            icon={<Activity className="text-orange-600" />}
-          />
+      <main className="max-w-7xl mx-auto">
+        {/* Tarjetas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+          {data?.mainMetrics?.map((item: any) => (
+            <div key={item.id} className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-xl">
+              <div className="flex justify-between items-start mb-4">
+                <p className="text-slate-400 font-semibold uppercase tracking-wider text-xs">{item.label}</p>
+                <div className="p-3 bg-slate-900/50 rounded-xl">{getIcon(item.label)}</div>
+              </div>
+              <h3 className="text-3xl font-bold text-white mb-4">{item.value}</h3>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-1 rounded-md text-xs font-bold ${item.isPositive ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                  {item.isPositive ? '+' : ''}{item.trend}%
+                </span>
+                <span className="text-slate-500 text-xs italic">vs. último mes</span>
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Chart Section */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold">Rendimiento en Tiempo Real</h3>
-            <p className="text-sm text-slate-500">Tráfico procesado por el BFF en las últimas 24h</p>
+        {/* Gráfico */}
+        <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-xl">
+          <div className="flex items-center gap-3 mb-8">
+            <Activity className="text-blue-500" />
+            <h2 className="text-xl font-bold text-white">Tendencia de Rendimiento</h2>
           </div>
-          <div className="h-[350px] w-full">
+          <div className="h-[400px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data}>
+              <AreaChart data={data?.chartData}>
                 <defs>
-                  <linearGradient id="colorKpi" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#005fce" stopOpacity={0.1}/>
+                  <linearGradient id="colorValor" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" />
+                <XAxis dataKey="name" stroke="#64748b" axisLine={false} tickLine={false} tick={{fontSize: 12}} dy={10} />
+                <YAxis stroke="#64748b" axisLine={false} tickLine={false} tick={{fontSize: 12}} />
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '12px', color: '#fff' }} />
+                <Area
+                  type="monotone"
+                  dataKey="valor"
+                  stroke="#3b82f6"
+                  strokeWidth={4}
+                  fillOpacity={1}
+                  fill="url(#colorValor)"
                 />
-                <Area type="monotone" dataKey="kpi" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorKpi)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
       </main>
-    </div>
-  );
-}
-
-// Sub-componente para las Tarjetas
-function KpiCard({ title, value, trend, isPositive, icon }: any) {
-  return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start mb-4">
-        <div className="p-3 bg-slate-50 rounded-xl">
-          {icon}
-        </div>
-        <div className={`flex items-center text-sm font-medium ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
-          {isPositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-          {trend}
-        </div>
-      </div>
-      <div>
-        <p className="text-sm font-medium text-slate-500 mb-1">{title}</p>
-        <h4 className="text-2xl font-bold">{value}</h4>
-      </div>
     </div>
   );
 }
